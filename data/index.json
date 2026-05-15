@@ -22,6 +22,22 @@
       "updated": "2026-05-14"
     },
     {
+      "id": "26.2-attributes",
+      "name": "26.2 Attributes",
+      "description": "A list of every Attribute in Minecraft 26.2",
+      "path": "data/26.2_attributes.json",
+      "tags": ["attributes"],
+      "updated": "2026-05-14"
+    },
+    {
+      "id": "26.1-attributes",
+      "name": "26.1 Attributes",
+      "description": "A list of every Attribute in Minecraft 26.1",
+      "path": "data/26.1_attributes.json",
+      "tags": ["attributes"],
+      "updated": "2026-05-14"
+    },
+    {
       "id": "version-list",
       "name": "Version List",
       "description": "Data for different versions of Minecraft",
