@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRIPSTONE // DATA TERMINAL</title>
+  <meta name="description" content="Dripstone — Minecraft data repository. Browse reference tables, configs, and structured data.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <div class="terminal-wrap">
+
+    <!-- ── HEADER ── -->
+    <header class="t-header">
+      <div class="t-header-top">
+        <div class="t-logo">
+          <span class="logo-bracket">[</span>
+          <span class="logo-text">DRIPSTONE</span>
+          <span class="logo-bracket">]</span>
+          <span class="logo-sub">// DATA TERMINAL //</span>
+        </div>
+        <div class="t-clock" id="clock" aria-live="off">00:00:00</div>
+      </div>
+      <nav class="t-nav" role="navigation" aria-label="Main navigation">
+        <button class="t-nav-btn active" data-view="browse" aria-pressed="true">
+          <span class="nav-arrow" aria-hidden="true">&gt;</span> BROWSE
+        </button>
+        <button class="t-nav-btn" data-view="about" aria-pressed="false">
+          <span class="nav-arrow" aria-hidden="true">&gt;</span> ABOUT
+        </button>
+        <div class="t-nav-spacer" aria-hidden="true"></div>
+        <div class="t-search-wrap" role="search">
+          <span class="search-prompt" aria-hidden="true">SEARCH:_</span>
+          <input
+            type="text"
+            id="search-input"
+            class="t-search"
+            placeholder="filter files..."
+            aria-label="Filter data files"
+            autocomplete="off"
+            spellcheck="false"
+          >
+        </div>
+      </nav>
+    </header>
+
+    <!-- ── MAIN ── -->
+    <main class="t-main">
+
+      <!-- Sidebar -->
+      <aside class="t-sidebar" aria-label="File index">
+        <div class="sidebar-hdr">
+          <span>// FILE INDEX //</span>
+          <span class="file-count" id="file-count">—</span>
+        </div>
+        <div id="file-list" class="file-list" role="listbox" aria-label="Data files">
+          <div class="list-msg">LOADING INDEX...</div>
+        </div>
+      </aside>
+
+      <!-- Content panels -->
+      <section class="t-content">
+
+        <!-- BROWSE view -->
+        <div id="view-browse" class="view active">
+          <div class="content-topbar">
+            <span class="content-path">
+              <span class="path-pfx" aria-hidden="true">FILE:</span>
+              <span id="path-text">none selected</span>
+            </span>
+            <div class="content-actions" id="content-actions" aria-label="File actions">
+              <button class="action-btn" id="btn-copy-url" title="Copy link to this file">LINK</button>
+              <button class="action-btn" id="btn-copy-json" title="Copy raw JSON">COPY RAW</button>
+              <button class="action-btn" id="btn-collapse" title="Collapse all nodes">COLLAPSE</button>
+              <button class="action-btn" id="btn-expand" title="Expand all nodes">EXPAND</button>
+            </div>
+          </div>
+
+          <div id="content-area" class="content-area" tabindex="0">
+            <div class="welcome-screen" id="welcome-screen">
+              <pre class="welcome-art" aria-hidden="true">
+         │
+         ▼
+        ╱│╲
+       ╱ │ ╲
+      ╱  ▼  ╲
+     ╱  ╱│╲  ╲
+    ╱  ╱ │ ╲  ╲
+   ▼  ▼  ▼  ▼  ▼
+
+  ╔═══════════════════╗
+  ║  D R I P S T O N E ║
+  ║   DATA REPOSITORY  ║
+  ╚═══════════════════╝</pre>
+              <p class="welcome-line">SELECT A FILE FROM THE INDEX TO BEGIN.</p>
+              <p class="welcome-dim">Use SEARCH to filter &bull; Click any entry to load</p>
+            </div>
+            <div id="json-view" class="json-viewer" aria-live="polite"></div>
+          </div>
+
+          <div class="content-statusbar">
+            <span id="status-msg" aria-live="polite">READY</span>
+            <span id="entry-count" aria-live="polite"></span>
+          </div>
+        </div>
+
+        <!-- ABOUT view -->
+        <div id="view-about" class="view">
+          <div class="about-wrap">
+            <h2 class="about-title">&gt; ABOUT THIS TERMINAL</h2>
+            <div class="about-divider">────────────────────────────────────────</div>
+
+            <p>
+              <strong>DRIPSTONE</strong> is a data repository for hosting JSON data used by MDIRT.
+            </p>
+
+            <p>
+              Browse or search the file index on the left. Click any entry to load and explore
+              its data in the viewer. Use <span class="kbd">LINK</span> to copy a direct URL to
+              any file, or <span class="kbd">COPY RAW</span> to copy the JSON to your clipboard.
+            </p>
+
+            <div class="about-divider">────────────────────────────────────────</div>
+            <h3 class="about-section-hdr">&gt; DIRECT DATA ACCESS</h3>
+            <p>
+              All JSON files are publicly accessible at their raw paths. You can fetch any file
+              directly via:
+            </p>
+            <div class="code-block">
+              <span class="cb-comment">// Example fetch</span><br>
+              fetch(<span class="cb-str">"https://joelalexander.dev/dripstone/data/&lt;filename&gt;.json"</span>)<br>
+              &nbsp;&nbsp;.then(<span class="cb-kw">res</span> =&gt; res.json())<br>
+              &nbsp;&nbsp;.then(<span class="cb-kw">data</span> =&gt; console.log(data));
+            </div>
+
+            <div class="about-divider">────────────────────────────────────────</div>
+            <p class="about-dim">DRIPSTONE DATA TERMINAL &bull; Minecraft Data Repository </p>
+          </div>
+        </div>
+
+      </section>
+    </main>
+
+    <!-- ── FOOTER ── -->
+    <footer class="t-footer">
+      <span>DRIPSTONE v1.0.0</span>
+      <span class="fsep" aria-hidden="true">│</span>
+      <span>MINECRAFT DATA REPOSITORY</span>
+      <span class="fsep" aria-hidden="true">│</span>
+      <span id="footer-status">PUBLIC ACCESS TERMINAL</span>
+    </footer>
+
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

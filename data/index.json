@@ -1,0 +1,34 @@
+{
+  "title": "Dripstone Data Repository",
+  "description": "Minecraft reference data and configuration files.",
+  "version": "1.0.0",
+  "files": [
+    {
+      "id": "26.1-data",
+      "name": "26.1 Data",
+      "description": "Data for mDirt for Minecraft 26.1",
+      "path": "data/26.1_data.json",
+      "category": "Reference",
+      "tags": ["blocks", "items", "biomes"],
+      "updated": "2026-05-14"
+    },
+    {
+      "id": "26.2-data",
+      "name": "26.2 Data",
+      "description": "Data for mDirt for Minecraft 26.2",
+      "path": "data/26.2_data.json",
+      "category": "Reference",
+      "tags": ["blocks", "items", "biomes"],
+      "updated": "2026-05-14"
+    },
+    {
+      "id": "version-list",
+      "name": "Version List",
+      "description": "Data for different versions of Minecraft",
+      "path": "data/version_list.json",
+      "category": "Config",
+      "tags": ["config", "datapack"],
+      "updated": "2026-05-14"
+    }
+  ]
+}
