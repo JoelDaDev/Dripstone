@@ -1,41 +1,37 @@
 'use strict';
 
-/* ================================================================
-   DRIPSTONE DATA TERMINAL
-   ================================================================ */
-
 const INDEX_PATH = 'data/index.json';
 
 class DripstoneApp {
   constructor() {
-    this.index        = null;
-    this.currentPath  = null;
-    this.currentRaw   = null;
-    this.allFiles     = [];
+    this.index       = null;
+    this.currentPath = null;
+    this.currentRaw  = null;
+    this.allFiles    = [];
 
-    this.$fileList    = document.getElementById('file-list');
-    this.$fileCount   = document.getElementById('file-count');
-    this.$pathText    = document.getElementById('path-text');
-    this.$jsonView    = document.getElementById('json-view');
-    this.$welcome     = document.getElementById('welcome-screen');
-    this.$statusMsg   = document.getElementById('status-msg');
-    this.$entryCount  = document.getElementById('entry-count');
-    this.$actions     = document.getElementById('content-actions');
-    this.$search      = document.getElementById('search-input');
-    this.$clock       = document.getElementById('clock');
+    this.$fileList   = document.getElementById('file-list');
+    this.$fileCount  = document.getElementById('file-count');
+    this.$title      = document.getElementById('content-title');
+    this.$subtitle   = document.getElementById('content-subtitle');
+    this.$dataView   = document.getElementById('data-view');
+    this.$welcome    = document.getElementById('welcome-screen');
+    this.$statusMsg  = document.getElementById('status-msg');
+    this.$entryCount = document.getElementById('entry-count');
+    this.$actions    = document.getElementById('content-actions');
+    this.$search     = document.getElementById('search-input');
+    this.$dataFilter = document.getElementById('data-filter');
 
     this.init();
   }
 
   async init() {
-    this.startClock();
     this.bindNav();
     this.bindActions();
     this.bindSearch();
+    this.bindDataFilter();
 
     await this.loadIndex();
 
-    // Handle URL hash for deep-linking to a file
     if (window.location.hash) {
       const hashPath = decodeURIComponent(window.location.hash.slice(1));
       const entry = this.allFiles.find(f => f.path === hashPath);
@@ -50,29 +46,16 @@ class DripstoneApp {
     });
   }
 
-  /* ── Clock ── */
-  startClock() {
-    const tick = () => {
-      const d = new Date();
-      const pad = n => String(n).padStart(2, '0');
-      this.$clock.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-    };
-    tick();
-    setInterval(tick, 1000);
-  }
-
   /* ── Nav view switching ── */
   bindNav() {
-    document.querySelectorAll('.t-nav-btn[data-view]').forEach(btn => {
+    document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const view = btn.dataset.view;
-        document.querySelectorAll('.t-nav-btn').forEach(b => {
-          b.classList.toggle('active', b === btn);
-          b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
-        });
-        document.querySelectorAll('.view').forEach(v => {
-          v.classList.toggle('active', v.id === `view-${view}`);
-        });
+        document.querySelectorAll('.nav-btn').forEach(b =>
+          b.classList.toggle('active', b === btn)
+        );
+        document.querySelectorAll('.view').forEach(v =>
+          v.classList.toggle('active', v.id === `view-${btn.dataset.view}`)
+        );
       });
     });
   }
@@ -82,23 +65,13 @@ class DripstoneApp {
     document.getElementById('btn-copy-url').addEventListener('click', () => {
       if (!this.currentPath) return;
       const url = `${location.origin}${location.pathname}#${encodeURIComponent(this.currentPath)}`;
-      navigator.clipboard.writeText(url).then(() => this.flash('btn-copy-url', 'COPIED!'));
+      navigator.clipboard.writeText(url).then(() => this.flash('btn-copy-url', 'Copied!'));
     });
 
     document.getElementById('btn-copy-json').addEventListener('click', () => {
       if (!this.currentRaw) return;
       navigator.clipboard.writeText(JSON.stringify(this.currentRaw, null, 2))
-        .then(() => this.flash('btn-copy-json', 'COPIED!'));
-    });
-
-    document.getElementById('btn-collapse').addEventListener('click', () => {
-      this.$jsonView.querySelectorAll('.jn-children').forEach(el => el.classList.add('collapsed'));
-      this.$jsonView.querySelectorAll('.jn-toggle').forEach(el => el.textContent = '▶');
-    });
-
-    document.getElementById('btn-expand').addEventListener('click', () => {
-      this.$jsonView.querySelectorAll('.jn-children').forEach(el => el.classList.remove('collapsed'));
-      this.$jsonView.querySelectorAll('.jn-toggle').forEach(el => el.textContent = '▼');
+        .then(() => this.flash('btn-copy-json', 'Copied!'));
     });
   }
 
@@ -110,29 +83,50 @@ class DripstoneApp {
     setTimeout(() => { btn.textContent = orig; btn.classList.remove('flash'); }, 1400);
   }
 
-  /* ── Search ── */
+  /* ── File search ── */
   bindSearch() {
     this.$search.addEventListener('input', () => {
-      const q = this.$search.value.trim().toLowerCase();
-      this.renderFileList(q);
+      this.renderFileList(this.$search.value.trim().toLowerCase());
+    });
+  }
+
+  /* ── Data filter (filters chips/rows in the current file view) ── */
+  bindDataFilter() {
+    this.$dataFilter.addEventListener('input', () => {
+      const q = this.$dataFilter.value.toLowerCase().trim();
+
+      this.$dataView.querySelectorAll('.chip').forEach(chip => {
+        chip.classList.toggle('hidden', q !== '' && !chip.textContent.toLowerCase().includes(q));
+      });
+
+      this.$dataView.querySelectorAll('.data-section').forEach(section => {
+        const total   = section.querySelectorAll('.chip').length;
+        const visible = section.querySelectorAll('.chip:not(.hidden)').length;
+        const badge   = section.querySelector('.data-section-count');
+        if (badge) badge.textContent = q ? `${visible} / ${total}` : String(total);
+      });
+
+      const total   = this.$dataView.querySelectorAll('.chip').length;
+      const visible = this.$dataView.querySelectorAll('.chip:not(.hidden)').length;
+      this.$entryCount.textContent = q && total > 0 ? `${visible} of ${total} shown` : '';
     });
   }
 
   /* ── Load index.json ── */
   async loadIndex() {
-    this.setStatus('LOADING INDEX...');
+    this.setStatus('Loading…');
     try {
       const res = await fetch(INDEX_PATH);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      this.index = await res.json();
-      this.allFiles = this.index.files || [];
+      this.index     = await res.json();
+      this.allFiles  = this.index.files || [];
       this.renderFileList('');
-      const count = this.allFiles.length;
-      this.$fileCount.textContent = `${count} file${count !== 1 ? 's' : ''}`;
-      this.setStatus('READY');
+      const n = this.allFiles.length;
+      this.$fileCount.textContent = String(n);
+      this.setStatus('');
     } catch (err) {
-      this.$fileList.innerHTML = `<div class="list-msg">ERROR: ${esc(err.message)}</div>`;
-      this.setStatus(`INDEX LOAD FAILED`);
+      this.$fileList.innerHTML = `<div class="list-msg">Failed to load index: ${esc(err.message)}</div>`;
+      this.setStatus('Error loading index');
     }
   }
 
@@ -148,16 +142,14 @@ class DripstoneApp {
       : this.allFiles;
 
     if (files.length === 0) {
-      this.$fileList.innerHTML = `<div class="list-msg">NO RESULTS</div>`;
+      this.$fileList.innerHTML = `<div class="list-msg">No results</div>`;
       return;
     }
 
-    // Group by category
     const groups = {};
     files.forEach(f => {
       const cat = f.category || 'General';
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(f);
+      (groups[cat] = groups[cat] || []).push(f);
     });
 
     let html = '';
@@ -168,7 +160,7 @@ class DripstoneApp {
         const isActive = f.path === this.currentPath;
         const tags = (f.tags || []).map(t => `<span class="fe-tag">${esc(t)}</span>`).join('');
         html += `
-          <div class="file-entry" data-path="${esc(f.path)}" role="option" aria-selected="${isActive}" tabindex="0">
+          <div class="file-entry${isActive ? ' active' : ''}" data-path="${esc(f.path)}" role="option" aria-selected="${isActive}" tabindex="0">
             <div class="fe-name">${esc(f.name || f.id)}</div>
             ${f.description ? `<div class="fe-desc">${esc(f.description)}</div>` : ''}
             ${tags ? `<div class="fe-tags">${tags}</div>` : ''}
@@ -179,11 +171,9 @@ class DripstoneApp {
 
     this.$fileList.innerHTML = html;
 
-    // Bind click events
     this.$fileList.querySelectorAll('.file-entry').forEach(el => {
       const onClick = () => {
-        const path = el.dataset.path;
-        const entry = this.allFiles.find(f => f.path === path);
+        const entry = this.allFiles.find(f => f.path === el.dataset.path);
         if (entry) this.loadFile(entry);
       };
       el.addEventListener('click', onClick);
@@ -194,20 +184,20 @@ class DripstoneApp {
   /* ── Load and display a data file ── */
   async loadFile(entry) {
     this.currentPath = entry.path;
-    this.setStatus(`LOADING ${entry.name.toUpperCase()}...`);
-    this.$entryCount.textContent = '';
-    this.$pathText.textContent = entry.path;
+    this.$dataFilter.value = '';
+    this.$title.textContent = entry.name || entry.id;
+    this.$subtitle.textContent = '';
     this.$welcome.style.display = 'none';
-    this.$jsonView.innerHTML = '<div class="list-msg">FETCHING DATA...</div>';
+    this.$dataView.innerHTML = '<div class="list-msg">Loading…</div>';
     this.$actions.classList.remove('visible');
+    this.$entryCount.textContent = '';
+    this.setStatus('Loading…');
 
-    // Update sidebar selection
     this.$fileList.querySelectorAll('.file-entry').forEach(el => {
-      const active = el.dataset.path === entry.path;
-      el.setAttribute('aria-selected', active ? 'true' : 'false');
+      el.classList.toggle('active', el.dataset.path === entry.path);
+      el.setAttribute('aria-selected', el.dataset.path === entry.path ? 'true' : 'false');
     });
 
-    // Update URL hash silently
     history.replaceState(null, '', `#${encodeURIComponent(entry.path)}`);
 
     try {
@@ -216,104 +206,122 @@ class DripstoneApp {
       const data = await res.json();
       this.currentRaw = data;
 
-      this.$jsonView.innerHTML = this.renderJSON(data);
-      this.bindToggleNodes();
-
+      this.$dataView.innerHTML = this.renderData(data);
       this.$actions.classList.add('visible');
-      const entryCount = this.countEntries(data);
-      this.$entryCount.textContent = entryCount;
-      this.setStatus('LOADED');
+
+      const summary = this.dataSummary(data);
+      this.$subtitle.textContent = summary;
+      this.$entryCount.textContent = '';
+      this.setStatus('');
     } catch (err) {
-      this.$jsonView.innerHTML = `<div class="list-msg" style="color:#f08070">ERROR: ${esc(err.message)}</div>`;
-      this.setStatus('LOAD FAILED');
+      this.$dataView.innerHTML = `<div class="list-msg" style="color:#e07070">Error: ${esc(err.message)}</div>`;
+      this.setStatus('Load failed');
     }
   }
 
-  countEntries(data) {
-    if (Array.isArray(data)) return `${data.length} entries`;
-    if (typeof data === 'object' && data !== null) {
-      const k = Object.keys(data).length;
-      return `${k} key${k !== 1 ? 's' : ''}`;
+  dataSummary(data) {
+    if (Array.isArray(data)) return `${data.length} items`;
+    if (typeof data !== 'object' || data === null) return '';
+    const keys = Object.keys(data);
+    if (keys.every(k => Array.isArray(data[k]))) {
+      const total = keys.reduce((n, k) => n + data[k].length, 0);
+      return `${keys.length} categories · ${total} items`;
     }
-    return '';
+    return `${keys.length} entries`;
   }
 
-  /* ── Toggle collapse/expand on click ── */
-  bindToggleNodes() {
-    this.$jsonView.querySelectorAll('.jn-toggle').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const children = btn.closest('.jn-node').querySelector(':scope > .jn-children');
-        if (!children) return;
-        const collapsed = children.classList.toggle('collapsed');
-        btn.textContent = collapsed ? '▶' : '▼';
-        const summary = btn.closest('.jn-row').querySelector('.jn-summary');
-        if (summary) summary.style.display = collapsed ? '' : 'none';
-      });
-    });
+  /* ── Smart data renderer ── */
+  renderData(data) {
+    if (typeof data !== 'object' || data === null) {
+      return `<div class="list-msg">${esc(String(data))}</div>`;
+    }
+
+    const keys = Object.keys(data);
+
+    // All values are string arrays → categorised chip grids
+    if (!Array.isArray(data) && keys.length > 0 &&
+        keys.every(k => Array.isArray(data[k]) && data[k].every(v => typeof v === 'string'))) {
+      return this.renderChipSections(data);
+    }
+
+    // Flat string array
+    if (Array.isArray(data) && data.every(v => typeof v === 'string')) {
+      return `<div class="data-section">${this.renderChipGrid(data)}</div>`;
+    }
+
+    // Single key whose value is an object of objects (e.g. version_list.json)
+    if (!Array.isArray(data) && keys.length === 1) {
+      const inner = data[keys[0]];
+      if (typeof inner === 'object' && !Array.isArray(inner) && inner !== null) {
+        const innerKeys = Object.keys(inner);
+        if (innerKeys.every(k => typeof inner[k] === 'object' && inner[k] !== null && !Array.isArray(inner[k]))) {
+          return this.renderObjectCards(inner);
+        }
+      }
+    }
+
+    // Generic object fallback
+    return this.renderGenericObject(data);
   }
 
-  /* ── JSON renderer ── */
-  renderJSON(value, key = null, isLast = true, depth = 0) {
-    const comma = isLast ? '' : `<span class="jn-comma">,</span>`;
-    const keyHtml = key !== null
-      ? `<span class="jn-key">"${esc(String(key))}"</span><span class="jn-colon">:</span>`
-      : '';
-
-    // Primitives
-    if (value === null)
-      return `<div class="jn-row"><span class="jn-leaf">${keyHtml}<span class="jn-null">null</span>${comma}</span></div>`;
-    if (typeof value === 'boolean')
-      return `<div class="jn-row"><span class="jn-leaf">${keyHtml}<span class="jn-bool">${value}</span>${comma}</span></div>`;
-    if (typeof value === 'number')
-      return `<div class="jn-row"><span class="jn-leaf">${keyHtml}<span class="jn-num">${value}</span>${comma}</span></div>`;
-    if (typeof value === 'string')
-      return `<div class="jn-row"><span class="jn-leaf">${keyHtml}<span class="jn-str">"${esc(value)}"</span>${comma}</span></div>`;
-
-    // Array
-    if (Array.isArray(value)) {
-      const len = value.length;
-      if (len === 0)
-        return `<div class="jn-row"><span class="jn-leaf">${keyHtml}<span class="jn-brak">[]</span>${comma}</span></div>`;
-
-      const summary = `<span class="jn-summary">${len} item${len !== 1 ? 's' : ''}</span>`;
-      const children = value.map((v, i) => this.renderJSON(v, null, i === len - 1, depth + 1)).join('');
+  renderChipSections(data) {
+    return Object.entries(data).map(([key, arr]) => {
+      const title = key.replace(/_/g, ' ');
       return `
-        <div class="jn-node">
-          <div class="jn-row">
-            <button class="jn-toggle" aria-label="Toggle">▼</button>
-            ${keyHtml}<span class="jn-brak">[</span>${summary}
+        <div class="data-section">
+          <div class="data-section-header">
+            <span class="data-section-title">${esc(title)}</span>
+            <span class="data-section-count">${arr.length}</span>
           </div>
-          <div class="jn-children">${children}</div>
-          <div class="jn-row"><span class="jn-brak">]</span>${comma}</div>
+          ${this.renderChipGrid(arr)}
         </div>`;
-    }
+    }).join('');
+  }
 
-    // Object
-    if (typeof value === 'object') {
-      const keys = Object.keys(value);
-      if (keys.length === 0)
-        return `<div class="jn-row"><span class="jn-leaf">${keyHtml}<span class="jn-brak">{}</span>${comma}</span></div>`;
+  renderChipGrid(arr) {
+    const chips = arr.map(v => `<span class="chip">${esc(v)}</span>`).join('');
+    return `<div class="chip-grid">${chips}</div>`;
+  }
 
-      const summary = `<span class="jn-summary">${keys.length} key${keys.length !== 1 ? 's' : ''}</span>`;
-      const children = keys.map((k, i) => this.renderJSON(value[k], k, i === keys.length - 1, depth + 1)).join('');
+  renderObjectCards(obj) {
+    const cards = Object.entries(obj).map(([name, data]) => {
+      const rows = Object.entries(data).map(([k, v]) => {
+        const displayKey = k.replace(/_/g, ' ');
+        const displayVal = Array.isArray(v) ? v.join(', ') : String(v);
+        return `
+          <div class="version-card-row">
+            <span class="version-card-key">${esc(displayKey)}</span>
+            <span class="version-card-val">${esc(displayVal)}</span>
+          </div>`;
+      }).join('');
       return `
-        <div class="jn-node">
-          <div class="jn-row">
-            <button class="jn-toggle" aria-label="Toggle">▼</button>
-            ${keyHtml}<span class="jn-brak">{</span>${summary}
-          </div>
-          <div class="jn-children">${children}</div>
-          <div class="jn-row"><span class="jn-brak">}</span>${comma}</div>
+        <div class="version-card">
+          <div class="version-card-title">${esc(name)}</div>
+          ${rows}
         </div>`;
-    }
+    }).join('');
+    return `<div class="version-grid">${cards}</div>`;
+  }
 
-    return '';
+  renderGenericObject(data) {
+    const rows = Object.entries(data).map(([k, v]) => {
+      const displayKey = k.replace(/_/g, ' ');
+      const displayVal = typeof v === 'object' ? JSON.stringify(v) : String(v);
+      return `
+        <div class="version-card-row">
+          <span class="version-card-key">${esc(displayKey)}</span>
+          <span class="version-card-val">${esc(displayVal)}</span>
+        </div>`;
+    }).join('');
+    return `
+      <div class="version-card" style="max-width:600px">
+        ${rows}
+      </div>`;
   }
 
   setStatus(msg) { this.$statusMsg.textContent = msg; }
 }
 
-/* ── Utility: HTML-escape ── */
 function esc(str) {
   return String(str)
     .replace(/&/g, '&amp;')
